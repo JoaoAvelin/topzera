@@ -1,0 +1,37 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.pyo
+*.db
+db.sqlite3
+*.sqlite3
+
+# Secret files
+.env
+*.env
+
+# Media and static
+/static/
+/media/
+/staticfiles/
+/node_modules/
+
+# VSCode and IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# MacOS & Linux junk
+.DS_Store
+Thumbs.db
+
+# migrations (opcional, se quiser excluir temporariamente)
+**/migrations/*.py
+!**/migrations/__init__.py
