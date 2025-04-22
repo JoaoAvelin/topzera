@@ -1,0 +1,1 @@
+<template><h1>Loja Online</h1></template>
