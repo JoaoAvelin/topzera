@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from .models import Produto, Categoria, Cliente, Pedido, ItemPedido
-from .serializers import ProdutoSerializer, CategoriaSerializer, ClienteSerializer, PedidoSerializer, ItemPedidoSerializer
+from .serializers import ProdutoSerializer, CategoriaSerializer, ClienteSerializer, PedidoSerializer, ItemPedidoSerializer, CadastroClienteSerializer
 from .permissions import IsAdmin, IsGestor, IsFuncionario
 from .permissions import (
     PermissaoProdutoPorGrupo,
@@ -76,6 +76,7 @@ class PedidoViewSet(viewsets.ModelViewSet):
 
 
 class ItemPedidoViewSet(viewsets.ModelViewSet):
+    queryset = ItemPedido.objects.all()
     serializer_class = ItemPedidoSerializer
 
     def get_permissions(self):
@@ -94,3 +95,9 @@ class ItemPedidoViewSet(viewsets.ModelViewSet):
         elif user.groups.filter(name='Admin').exists() or user.groups.filter(name='Gestor').exists():
             return ItemPedido.objects.all()
         return ItemPedido.objects.filter(pedido__cliente=user)
+    
+
+class CadastroClienteView(generics.CreateAPIView):
+    queryset = Cliente.objects.all()
+    serializer_class = CadastroClienteSerializer
+    permission_classes = []  # Pública (sem autenticação)

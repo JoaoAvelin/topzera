@@ -43,3 +43,18 @@ class PedidoSerializer(serializers.ModelSerializer):
         model = Pedido
         fields = ['id', 'cliente', 'cliente_username', 'data_pedido', 'status', 'total', 'itens']
         read_only_fields = ['cliente', 'data_pedido', 'total']
+
+class CadastroClienteSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username')
+    email = serializers.EmailField(source='user.email')
+    password = serializers.CharField(write_only=True, source='user.password')
+
+    class Meta:
+        model = Cliente
+        fields = ['username', 'email', 'password', 'cpf', 'telefone', 'endereco']
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create_user(**user_data)
+        cliente = Cliente.objects.create(user=user, **validated_data)
+        return cliente
