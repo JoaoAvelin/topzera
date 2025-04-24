@@ -53,6 +53,7 @@ class ProfileView(APIView):
 class PedidoViewSet(viewsets.ModelViewSet):
     queryset = Pedido.objects.all()
     serializer_class = PedidoSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
         if self.request.method in ['DELETE', 'PUT', 'PATCH']:
@@ -69,10 +70,11 @@ class PedidoViewSet(viewsets.ModelViewSet):
             return Pedido.objects.none()
         elif user.groups.filter(name='Admin').exists() or user.groups.filter(name='Gestor').exists():
             return Pedido.objects.all()
-        return Pedido.objects.filter(cliente=user)
+        return Pedido.objects.filter(cliente=user.cliente)  # Clientes veem apenas seus pedidos
 
     def perform_create(self, serializer):
-        serializer.save(cliente=self.request.user)
+        cliente = self.request.user.cliente
+        serializer.save(cliente=cliente)
 
 
 class ItemPedidoViewSet(viewsets.ModelViewSet):
