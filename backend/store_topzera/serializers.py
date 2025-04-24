@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Categoria, Produto, Cliente
+from .models import Categoria, Produto, Cliente, ItemPedido, Pedido
 from django.contrib.auth.models import User
 
 
@@ -22,3 +22,24 @@ class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
         fields = ['id', 'username', 'email', 'cpf', 'telefone', 'endereco']
+
+class ItemPedidoSerializer(serializers.ModelSerializer):
+    produto_nome = serializers.ReadOnlyField(source='produto.nome')
+
+    class Meta:
+        model = ItemPedido
+        fields = ['id', 'pedido', 'produto', 'produto_nome', 'quantidade', 'preco']
+
+    def validate(self, data):
+        if data['quantidade'] <= 0:
+            raise serializers.ValidationError("A quantidade deve ser maior que zero.")
+        return data
+
+class PedidoSerializer(serializers.ModelSerializer):
+    itens = ItemPedidoSerializer(many=True, read_only=True)
+    cliente_username = serializers.ReadOnlyField(source='cliente.username')
+
+    class Meta:
+        model = Pedido
+        fields = ['id', 'cliente', 'cliente_username', 'data_pedido', 'status', 'total', 'itens']
+        read_only_fields = ['cliente', 'data_pedido', 'total']

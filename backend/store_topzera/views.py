@@ -1,26 +1,30 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from .models import Produto, Categoria, Cliente
-from .serializers import ProdutoSerializer, CategoriaSerializer, ClienteSerializer
+from .models import Produto, Categoria, Cliente, Pedido, ItemPedido
+from .serializers import ProdutoSerializer, CategoriaSerializer, ClienteSerializer, PedidoSerializer, ItemPedidoSerializer
+from .permissions import IsAdmin, IsGestor, IsFuncionario
 from .permissions import (
     PermissaoProdutoPorGrupo,
     PermissaoCategoriaPorGrupo,
     PermissaoClientePorGrupo
 )
 
+
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
     permission_classes = [PermissaoCategoriaPorGrupo]
 
+
 class ProdutoViewSet(viewsets.ModelViewSet):
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
     permission_classes = [PermissaoProdutoPorGrupo]
+
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
@@ -44,3 +48,49 @@ class ProfileView(APIView):
             'username': user.username,
             'email': user.email
         })
+
+
+class PedidoViewSet(viewsets.ModelViewSet):
+    queryset = Pedido.objects.all()
+    serializer_class = PedidoSerializer
+
+    def get_permissions(self):
+        if self.request.method in ['DELETE', 'PUT', 'PATCH']:
+            if self.request.user.groups.filter(name='Admin').exists():
+                return [IsAdmin()]
+            elif self.request.user.groups.filter(name='Gestor').exists():
+                return [IsGestor()]
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name='Funcionario').exists():
+            return Pedido.objects.none()
+        elif user.groups.filter(name='Admin').exists() or user.groups.filter(name='Gestor').exists():
+            return Pedido.objects.all()
+        return Pedido.objects.filter(cliente=user)
+
+    def perform_create(self, serializer):
+        serializer.save(cliente=self.request.user)
+
+
+class ItemPedidoViewSet(viewsets.ModelViewSet):
+    serializer_class = ItemPedidoSerializer
+
+    def get_permissions(self):
+        if self.request.method in ['DELETE', 'PUT', 'PATCH']:
+            if self.request.user.groups.filter(name='Admin').exists():
+                return [IsAdmin()]
+            elif self.request.user.groups.filter(name='Gestor').exists():
+                return [IsGestor()]
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name='Funcionario').exists():
+            return ItemPedido.objects.none()
+        elif user.groups.filter(name='Admin').exists() or user.groups.filter(name='Gestor').exists():
+            return ItemPedido.objects.all()
+        return ItemPedido.objects.filter(pedido__cliente=user)
