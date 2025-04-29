@@ -7,7 +7,7 @@ router.register(r'produtos', ProdutoViewSet)
 router.register(r'categorias', CategoriaViewSet)
 router.register(r'clientes', ClienteViewSet)
 router.register(r'pedidos', PedidoViewSet)
-router.register(r'itens-pedido', ItemPedidoViewSet)
+router.register(r'itens-pedido', ItemPedidoViewSet, basename='itempedido')
 
 urlpatterns = [
     path('', include(router.urls)),

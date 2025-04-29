@@ -10,10 +10,27 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 class ProdutoSerializer(serializers.ModelSerializer):
     categoria = CategoriaSerializer(read_only=True)
+    categoria_id = serializers.PrimaryKeyRelatedField(
+        queryset=Categoria.objects.all(), write_only=True
+    )
 
     class Meta:
         model = Produto
         fields = '__all__'
+
+    def create(self, validated_data):
+        categoria = validated_data.pop('categoria_id')
+        produto = Produto.objects.create(categoria=categoria, **validated_data)
+        return produto
+
+    def update(self, instance, validated_data):
+        categoria = validated_data.pop('categoria_id', None)
+        if categoria:
+            instance.categoria = categoria
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class ClienteSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
@@ -28,12 +45,33 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemPedido
-        fields = ['id', 'pedido', 'produto', 'produto_nome', 'quantidade', 'preco']
+        fields = ['id', 'produto', 'produto_nome', 'quantidade', 'preco']  # Removido 'pedido'
 
     def validate(self, data):
         if data['quantidade'] <= 0:
             raise serializers.ValidationError("A quantidade deve ser maior que zero.")
         return data
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        cliente = getattr(user, 'cliente', None)
+        if not cliente:
+            raise serializers.ValidationError("Apenas clientes podem criar itens de pedido.")
+
+        # Verifica se já existe um pedido pendente
+        pedido, created = Pedido.objects.get_or_create(cliente=user, status='pendente')
+
+        item = ItemPedido.objects.create(
+            pedido=pedido,
+            **validated_data
+        )
+
+        # Atualiza o total do pedido
+        pedido.total += item.preco * item.quantidade
+        pedido.save()
+
+        return item
+
 
 class PedidoSerializer(serializers.ModelSerializer):
     itens = ItemPedidoSerializer(many=True, read_only=True)

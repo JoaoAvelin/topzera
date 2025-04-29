@@ -48,10 +48,10 @@ class Pedido(models.Model):
         return f'Pedido {self.id} - {getattr(self.cliente.user, "username", str(self.cliente))}'
 
 class ItemPedido(models.Model):
-    pedido = models.ForeignKey(Pedido, related_name='itens', on_delete=models.CASCADE)
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='itens')
     produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
     quantidade = models.PositiveIntegerField()
     preco = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f'{self.quantidade} x {self.produto.nome} (Pedido {self.pedido.id})'
+        return f"{self.quantidade}x {self.produto.nome} (Pedido {self.pedido.id})"

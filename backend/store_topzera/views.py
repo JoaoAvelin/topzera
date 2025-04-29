@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db import transaction
 from rest_framework import viewsets, permissions, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -78,25 +79,35 @@ class PedidoViewSet(viewsets.ModelViewSet):
 
 
 class ItemPedidoViewSet(viewsets.ModelViewSet):
-    queryset = ItemPedido.objects.all()
     serializer_class = ItemPedidoSerializer
-
-    def get_permissions(self):
-        if self.request.method in ['DELETE', 'PUT', 'PATCH']:
-            if self.request.user.groups.filter(name='Admin').exists():
-                return [IsAdmin()]
-            elif self.request.user.groups.filter(name='Gestor').exists():
-                return [IsGestor()]
-            return [permissions.IsAdminUser()]
-        return [permissions.IsAuthenticated()]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
         if user.groups.filter(name='Funcionario').exists():
             return ItemPedido.objects.none()
-        elif user.groups.filter(name='Admin').exists() or user.groups.filter(name='Gestor').exists():
-            return ItemPedido.objects.all()
         return ItemPedido.objects.filter(pedido__cliente=user)
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        user = self.request.user
+
+        # Busca ou cria um pedido pendente
+        pedido, created = Pedido.objects.get_or_create(
+            cliente=user,
+            status='pendente'
+        )
+
+        produto = serializer.validated_data['produto']
+        quantidade = serializer.validated_data['quantidade']
+        preco = produto.preco  # puxando preço do modelo Produto
+
+        # Cria o item e salva
+        item = serializer.save(pedido=pedido, preco=preco)
+
+        # Atualiza total do pedido
+        pedido.total += preco * quantidade
+        pedido.save()
     
 
 class CadastroClienteView(generics.CreateAPIView):
