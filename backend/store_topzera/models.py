@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from .models import CupomDesconto
 
 class Categoria(models.Model):
     nome = models.CharField(max_length=100)
@@ -47,11 +48,26 @@ class Pedido(models.Model):
     def __str__(self):
         return f'Pedido {self.id} - {getattr(self.cliente.user, "username", str(self.cliente))}'
 
+
 class ItemPedido(models.Model):
-    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='itens')
+    pedido = models.ForeignKey(Pedido, related_name='itens', on_delete=models.CASCADE)
     produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
     quantidade = models.PositiveIntegerField()
     preco = models.DecimalField(max_digits=10, decimal_places=2)
+    cupom = models.ForeignKey(CupomDesconto, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def preco_com_desconto(self):
+        if self.cupom and self.cupom.ativo:
+            return self.preco * (1 - self.cupom.desconto_percentual / 100)
+        return self.preco
+
+
+    
+class CupomDesconto(models.Model):
+    codigo = models.CharField(max_length=20, unique=True)
+    desconto_percentual = models.DecimalField(max_digits=5, decimal_places=2)
+    ativo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.quantidade}x {self.produto.nome} (Pedido {self.pedido.id})"
+        return f"{self.codigo} - {self.desconto_percentual}%"
+
